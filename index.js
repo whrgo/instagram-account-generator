@@ -5,9 +5,8 @@ const uuid = require("uuid");
 /* get config */
 const config = require("./config.json");
 
-async function getEmail(browser) {
-  const page = await browser.newPage();
-
+async function getEmail(page) {
+  await page.bringToFront();
   await page.goto("https://temp-mail.org/", {
     waitUntil: "networkidle2",
     timeout: 0,
@@ -35,7 +34,8 @@ function createAccountInfo(email) {
     const names = fs.readFileSync("names.txt", "utf8");
     username =
       names.split("\n")[Math.floor(Math.random() * names.split("\n").length)];
-    username = username + String(Math.random() * 1000).split(".")[0];
+    username = username.replace(" ", "_");
+    username = username + String(Math.random() * 100000).split(".")[0];
     return username;
   }
 
@@ -43,11 +43,35 @@ function createAccountInfo(email) {
   const AccountInfo = {
     email: email,
     password: config.password,
-    fullName: uuid.v4().replace("-", ""),
+    fullName: uuid.v4().replace("-", "").split("-")[0],
     username: getUsername(),
   };
 
   return AccountInfo;
+}
+
+async function FillAccountInfo(page, accountInfo) {
+  async function dsne(page, infoname, info) {
+    const p = await page.$("input[name=" + infoname + "]");
+    await p.focus();
+    await page.keyboard.type(info);
+  }
+
+  await page.bringToFront();
+  await page.goto("https://www.instagram.com/accounts/emailsignup/", {
+    waitUntil: "networkidle2",
+    timeout: 0,
+  });
+
+  // filling
+  await dsne(page, "emailOrPhone", accountInfo.email);
+  await dsne(page, "fullName", accountInfo.fullName);
+  await dsne(page, "username", accountInfo.username);
+  await dsne(page, "password", accountInfo.password);
+
+  // click sign up button
+  const btnSignUp = await page.$("button[type=submit]");
+  await btnSignUp.click();
 }
 
 async function main() {
@@ -64,7 +88,8 @@ async function main() {
     headless: false,
   });
 
-  const email = await getEmail(browser); // getting the email
+  const mailPage = await browser.newPage();
+  const email = await getEmail(mailPage); // getting the email
   if (email === false) {
     // error while getting email
     console.log("error while getting email");
@@ -76,7 +101,11 @@ async function main() {
   // create account info
   let AccountInfo = createAccountInfo(email);
 
-  browser.close();
+  // fill the args at `https://www.instagram.com/accounts/emailsignup/`
+  const signupPage = await browser.newPage();
+  await FillAccountInfo(signupPage, AccountInfo);
+
+  // browser.close();
 }
 
 main();
