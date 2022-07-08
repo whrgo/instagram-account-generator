@@ -1,4 +1,9 @@
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const uuid = require("uuid");
+
+/* get config */
+const config = require("./config.json");
 
 async function getEmail(browser) {
   const page = await browser.newPage();
@@ -24,6 +29,27 @@ async function getEmail(browser) {
   }
 }
 
+function createAccountInfo(email) {
+  function getUsername() {
+    // make random names from `names.txt`
+    const names = fs.readFileSync("names.txt", "utf8");
+    username =
+      names.split("\n")[Math.floor(Math.random() * names.split("\n").length)];
+    username = username + String(Math.random() * 1000).split(".")[0];
+    return username;
+  }
+
+  // making account info
+  const AccountInfo = {
+    email: email,
+    password: config.password,
+    fullName: uuid.v4().replace("-", ""),
+    username: getUsername(),
+  };
+
+  return AccountInfo;
+}
+
 async function main() {
   const browser = await puppeteer.launch({
     args: [
@@ -46,6 +72,9 @@ async function main() {
   }
   console.log(email);
   /* Got email */
+
+  // create account info
+  let AccountInfo = createAccountInfo(email);
 
   browser.close();
 }
