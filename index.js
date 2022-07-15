@@ -141,13 +141,22 @@ async function emailverify(page) {
             .innerText.match(/\d+/g)[0]
       );
 
-      if (typeof content != String) {
-        throw new Error("not found");
-      }
+      console.log(typeof content);
 
       return content;
     } catch (e) {}
   }
+}
+
+async function fillVerificationCode(page, verfication_code) {
+  await page.bringToFront();
+  await page.waitForSelector("input[name=email_confirmation_code]");
+  await page.type("input[name=email_confirmation_code]", verfication_code);
+
+  await page.evaluate(() =>
+    document.querySelector("button[type=submit]").click()
+  );
+  return true;
 }
 
 async function main() {
@@ -196,7 +205,13 @@ async function main() {
   // fill the birth args
   await fillBirthInfo(signupPage, birthInfo);
 
+  // get the verification code
   const verfication_code = await emailverify(mailPage);
+
+  // fill the verification code
+  await fillVerificationCode(signupPage, verfication_code);
+
+  // agree to terms of use
 
   browser.close();
 }
