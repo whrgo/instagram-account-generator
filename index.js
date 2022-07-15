@@ -1,8 +1,10 @@
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const uuid = require("uuid");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const { PuppeteerBlocker } = require("@cliqz/adblocker-puppeteer");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const { fetch } = require("cross-fetch");
 
 /* get config */
 const config = require("./config.json");
@@ -118,19 +120,32 @@ async function fillBirthInfo(page, birthinfo) {
 }
 
 async function emailverify(page) {
+  await page.bringToFront();
+
   while (true) {
     try {
+      let content = null;
       await page.waitForSelector("[title*=Instagram ]", { timeout: 500 });
-      const mailli = await page.$("[title*=Instagram ]").parentNode;
 
-      const content = await mailli.$eval(
-        "span.inboxSubject.small.subject-title.d-none.visable-xs-sm",
-        (el) => el.innerText
+      // await page.waitForFunction(() => {
+      //   return document
+      //     .querySelector("[title*=Instagram ]")
+      //     .parentElement.lastChild.textContent.indexOf("code");
+      // });
+
+      content = await page.evaluate(
+        () =>
+          document
+            .querySelector("[title*=Instagram ]")
+            .parentElement.parentNode.parentElement.querySelectorAll("a")[1]
+            .innerText.match(/\d+/g)[0]
       );
 
-      const elem = String(content).match(/(\d+)/)[0];
+      if (typeof content != String) {
+        throw new Error("not found");
+      }
 
-      return elem;
+      return content;
     } catch (e) {}
   }
 }
